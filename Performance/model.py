@@ -1,30 +1,37 @@
+import alch
+from sqlalchemy import Column, Integer, Date
+
+
+class perfomance(alch.Base):
+    __tablename__ = 'Perfomance'
+    Prefomance_ID = Column(Integer, primary_key=True)
+    Festival_ID = Column(Integer, nullable=False)
+    Artist_ID = Column(Integer, nullable=False)
+    Start_time = Column(Date, nullable=False)
+    Finish_time = Column(Date, nullable=False)
+
+
 class ModelPerformance:
     def __init__(self, db_model):
         self.conn = db_model.conn
+        self.engine = alch.create_engine(alch.DATABASE_URL)
+        self.session = alch.Session.configure(bind=self.engine)
+        self.session = alch.Session()
 
-    def add_Performance(self, Performance_ID, Festival_ID, Artist_ID, Start_time, Finish_time):
-        c = self.conn.cursor()
+    def add_Performance(self, Preformance_ID, Festival_ID, Artist_ID, Start_time, Finish_time):
         try:
-            # Check if client_id and room_number match parent tables
-            c.execute('SELECT 1 FROM "Festival" WHERE "Festival_ID" = %s', (Festival_ID,))
-            Festival_exists = c.fetchone()
-
-            c.execute('SELECT 1 FROM "Performer" WHERE "Artist_ID" = %s', (Artist_ID,))
-            Performer_exists = c.fetchone()
-
-            if not Festival_exists or not Performer_exists:
-                # Return an exception notification and throw an error
-                return False  # Or throw an exception to process it further
-            else:
-                # All checks have passed, insert into booking_ticket
-                c.execute(
-                    'INSERT INTO "Perfomance" ("Preformance_ID", "Festival_ID", "Artist_ID", '
-                    '"Start_time", "Finish_time") VALUES (%s, %s, %s, %s, %s)',
-                    (Performance_ID, Festival_ID, Artist_ID, Start_time, Finish_time))
-                self.conn.commit()
-                return True
+            new_performance = perfomance(
+                Performance_ID=Preformance_ID,
+                Festival_ID=Festival_ID,
+                Artist_ID=Artist_ID,
+                Start_time=Start_time,
+                Finish_time=Finish_time
+            )
+            self.session.add(new_performance)
+            self.session.commit()
+            return True  # Returns True if the update was successful
         except Exception as e:
-            self.conn.rollback()
+            self.session.rollback()
             print(f"Error With Adding A Performance: {str(e)}")
             return False
 
@@ -33,18 +40,24 @@ class ModelPerformance:
         c.execute('SELECT * FROM "Perfomance"')
         return c.fetchall()
 
-    def update_Performance(self, Performance_ID, Festival_ID, Artist_ID, Start_time, Finish_time):
-        c = self.conn.cursor()
+    def update_Performance(self, Preformance_ID, Festival_ID, Artist_ID, Start_time, Finish_time):
         try:
-            # Attempting to update a record
-            c.execute('UPDATE "Perfomance" SET "Festival_ID"=%s, "Artist_ID"=%s, "Start_time"=%s, '
-                      '"Finish_time"=%s WHERE "Preformance_ID"=%s',
-                      (Festival_ID, Artist_ID, Start_time, Finish_time, Performance_ID))
-            self.conn.commit()
-            return True  # Returns True if the update was successful
+            Perfomance = self.session.query(perfomance).filter_by(Prefomance_ID=Preformance_ID).first()
+
+            if Perfomance:
+                Perfomance.Preformance_ID = Preformance_ID
+                Perfomance.Festival_ID = Festival_ID
+                Perfomance.Artist_ID = Artist_ID
+                Perfomance.Start_time = Start_time
+                Perfomance.Finish_time = Finish_time
+
+                self.session.commit()
+                return True  # Returns True if the update was successful
+            else:
+                return False
         except Exception as e:
             # Handling an error if the update failed
-            self.conn.rollback()
+            self.session.rollback()
             print(f"Error With Updating A Performance: {str(e)}")
             return False   # Returns False if insertion fails
 

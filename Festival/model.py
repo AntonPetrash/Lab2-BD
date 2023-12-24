@@ -1,16 +1,34 @@
+import alch
+from sqlalchemy import Column, Integer, String, Numeric
+
+
+class festival(alch.Base):
+    __tablename__ = 'Festival'
+    Festival_ID = Column(Integer, primary_key=True)
+    Fest_name = Column(String, nullable=False)
+    Price = Column(Numeric(10, 2), nullable=False)
+    City = Column(String, nullable=False)
+
 class ModelFestival:
     def __init__(self, db_model):
         self.conn = db_model.conn
+        self.engine = alch.create_engine(alch.DATABASE_URL)
+        self.session = alch.Session.configure(bind=self.engine)
+        self.session = alch.Session()
 
     def add_Festival(self, Festival_ID, Fest_name, Price, City):
-        c = self.conn.cursor()
         try:
-            c.execute('INSERT INTO "Festival" ("Festival_ID", "Fest_name", "Price", "City") VALUES (%s, %s, %s, %s)',
-                      (Festival_ID, Fest_name, Price, City))
-            self.conn.commit()
+            new_festival = festival(
+                Festival_ID=Festival_ID,
+                Fest_name=Fest_name,
+                Price=Price,
+                City=City
+            )
+            self.session.add(new_festival)
+            self.session.commit()
             return True  # Returns True if the update was successful
         except Exception as e:
-            self.conn.rollback()
+            self.session.rollback()
             print(f"Error With Adding A Festival: {str(e)}")
             return False  # Returns False if insertion fails
 
@@ -20,25 +38,36 @@ class ModelFestival:
         return c.fetchall()
 
     def update_Festival(self, Festival_ID, Fest_name, Price, City):
-        c = self.conn.cursor()
         try:
-            c.execute('UPDATE "Festival" SET "Fest_name"=%s, "Price"=%s, "City"=%s WHERE "Festival_ID"=%s',
-                      (Fest_name, Price, City, Festival_ID))
-            self.conn.commit()
-            return True  # Returns True if the update was successful
+            Festival = self.session.query(festival).filter_by(Festival_ID=Festival_ID).first()
+
+            if Festival:
+                Festival.Festival_ID = Festival_ID
+                Festival.Fest_name = Fest_name
+                Festival.Price = Price
+                Festival.City = City
+
+                self.session.commit()
+                return True  # Returns True if the update was successful
+            else:
+                return False
         except Exception as e:
-            self.conn.rollback()
-            print(f"Error With Updating A Festival: {str(e)}")
+            self.session.rollback()
+            print(f"Error With A Festival Updating: {str(e)}")
             return False   # Returns False if insertion fails
 
     def delete_Festival(self, Festival_ID):
-        c = self.conn.cursor()
         try:
-            c.execute('DELETE FROM "Festival" WHERE "Festival_ID"=%s', (Festival_ID,))
-            self.conn.commit()
-            return True  # Returns True if the update was successful
+            Festival = self.session.query(festival).filter_by(Festival_ID=Festival_ID).first()
+
+            if Festival:
+                self.session.delete(Festival)
+                self.session.commit()
+                return True  # Returns True if the update was successful
+            else:
+                return False
         except Exception as e:
-            self.conn.rollback()
+            self.session.rollback()
             print(f"Error With Deleting A Festival Violates A Foreign Key Constraint: {str(e)}")
             return False   # Returns False if insertion fails
 
